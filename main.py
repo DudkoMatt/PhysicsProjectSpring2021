@@ -110,18 +110,20 @@ def interpolate(array):
     return savgol_filter(array, 5, 3)
 
 
-def plot(x, y):
-    # ToDo: add x
+def plot(x, y, plot_name):
     matplotlib.pyplot.plot(x, y)
+    matplotlib.pyplot.title(plot_name)
+    matplotlib.pyplot.xlabel('λ, nm')
+    matplotlib.pyplot.ylabel('E')
     matplotlib.pyplot.show()
 
 
-def analyze(all_data, lambda_data):
-    for one_file_data in all_data:
-        one_file_data = average(one_file_data)
+def analyze(all_data, lambda_data, data_namings):
+    for idx in range(len(all_data)):
+        one_file_data = average(all_data[idx])
         one_file_data = median(one_file_data)
         one_file_data = interpolate(one_file_data)
-        plot(lambda_data, one_file_data)
+        plot(lambda_data, one_file_data, data_namings[idx])
 
 
 if __name__ == "__main__":
@@ -149,4 +151,4 @@ if __name__ == "__main__":
     # Cut lambda array due to using median
     lambda_data = lambda_data[2: len(lambda_data) - 2]
 
-    analyze(all_data, lambda_data)
+    analyze(all_data, lambda_data, filenames)
