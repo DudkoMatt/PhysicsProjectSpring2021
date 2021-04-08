@@ -98,6 +98,8 @@ def plot(x: list[float], y: np.ndarray, plot_name: str, normalised=True):
     matplotlib.pyplot.title(plot_name)
     matplotlib.pyplot.xlabel('λ, nm')
     matplotlib.pyplot.ylabel('E_0' if normalised else 'E')
+    if normalised:
+        matplotlib.pyplot.ylim(0, 1)
     matplotlib.pyplot.show()
 
 
