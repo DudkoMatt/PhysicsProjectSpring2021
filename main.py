@@ -60,31 +60,6 @@ def get_all_vectors_from_file(filename: str, naming_pattern=r"^\[[0-9]*\]-.*-[0-
 
     return [vector[start:end] for vector in vectors], lambda_array[start:end]
 
-# ToDO
-# def get_lambda(filename: str) -> list:
-#     with open(filename, 'r', encoding='utf16') as f:
-#         total_str = ''.join(f.readlines())
-#
-#     while total_str.find('vecteur') != -1:
-#         # Skip string to next vector
-#         total_str = total_str[total_str.find('vecteur') + len('vecteur]\n\t'):]
-#         total_str = total_str[total_str.find('\n\t') + 2:]
-#
-#         # Get name
-#         name = total_str[:total_str.find('\n')]
-#         name = name[name.find('"') + 1:-1]
-#
-#         # Getting data
-#         if name == 'λ':
-#             total_str = total_str[total_str.find('points'):]
-#             data = total_str[:total_str.find("}") + 1]
-#             data = data[data.find("{") + 1:-1].replace("\t", " ").replace("\n", " ").split()
-#             start = np.where(np.array(data) >= 400)[0][0]
-#             end = np.where(np.array(data) <= 700)[0][-1] + 1
-#             return data
-#
-#     raise NameError('Cannot find lambda in file')
-
 
 def average(arrays):
     result = []
@@ -132,9 +107,6 @@ if __name__ == "__main__":
     only_files = [f for f in listdir(getcwd()) if isfile(join(getcwd(), f))]
     files = list(filter(lambda x: re.match(r'.*\.lab$', x), only_files))
 
-    # ToDO
-    # writer = pandas.ExcelWriter('output.xlsx', engine='xlsxwriter')
-
     all_data = []
     filenames = []
 
@@ -145,8 +117,6 @@ if __name__ == "__main__":
         data_array, lambda_data = get_all_vectors_from_file(i)
         all_data.append(data_array)
         filenames.append(naming_pattern.search(i).group().replace('.lab', ''))
-
-    # lambda_data = get_lambda(filenames[0] + '.lab')
 
     # Cut lambda array due to using median
     lambda_data = lambda_data[2: len(lambda_data) - 2]
