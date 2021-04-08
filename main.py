@@ -12,7 +12,7 @@ def get_all_vectors_from_file(filename: str, naming_pattern=r"^\[[0-9]*\]-.*-[0-
     Filtering data from *.lab
     :param filename: name of the file
     :param naming_pattern: which vectors not to ignore
-    :return: all vectors
+    :return: all vectors, lambda
     """
 
     with open(filename, 'r', encoding='utf16') as f:
@@ -60,7 +60,7 @@ def get_all_vectors_from_file(filename: str, naming_pattern=r"^\[[0-9]*\]-.*-[0-
 
     return [vector[start:end] for vector in vectors], lambda_array[start:end]
 
-
+# ToDO
 # def get_lambda(filename: str) -> list:
 #     with open(filename, 'r', encoding='utf16') as f:
 #         total_str = ''.join(f.readlines())
@@ -112,7 +112,7 @@ def interpolate(array):
 
 def plot(x, y):
     # ToDo: add x
-    matplotlib.pyplot.plot(y)
+    matplotlib.pyplot.plot(x, y)
     matplotlib.pyplot.show()
 
 
@@ -130,6 +130,7 @@ if __name__ == "__main__":
     only_files = [f for f in listdir(getcwd()) if isfile(join(getcwd(), f))]
     files = list(filter(lambda x: re.match(r'.*\.lab$', x), only_files))
 
+    # ToDO
     # writer = pandas.ExcelWriter('output.xlsx', engine='xlsxwriter')
 
     all_data = []
@@ -144,5 +145,8 @@ if __name__ == "__main__":
         filenames.append(naming_pattern.search(i).group().replace('.lab', ''))
 
     # lambda_data = get_lambda(filenames[0] + '.lab')
-    lambda_data = lambda_data[2: len(lambda_data) - 1]
+
+    # Cut lambda array due to using median
+    lambda_data = lambda_data[2: len(lambda_data) - 2]
+
     analyze(all_data, lambda_data)
