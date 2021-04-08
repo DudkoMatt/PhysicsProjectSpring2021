@@ -89,7 +89,7 @@ def median(array: list[float]) -> list[float]:
     return result
 
 
-def interpolate(array: list[float], window_length=151, polyorder=1) -> np.ndarray:
+def interpolate(array: list[float], window_length=31, polyorder=3) -> np.ndarray:
     return savgol_filter(array, window_length, polyorder)
 
 
@@ -103,18 +103,22 @@ def plot(x: list[float], y: np.ndarray, plot_name: str, normalised=True):
     matplotlib.pyplot.show()
 
 
-def analyze(all_data: list[list[list[float]]], lambda_data: list[float], data_namings: list[str], white_idx: int, black_idx: int) -> None:
+def analyze(all_data: list[list[list[float]]], lambda_data: list[float], data_namings: list[str], white_idx: int, black_idx: int) -> list[list[float]]:
     white_data_average = interpolate(average(all_data[white_idx]))
     black_data_average = interpolate(average(all_data[black_idx]))
 
+    result = []
+
     for idx in range(len(all_data)):
-        one_file_data = average(all_data[idx])
+        one_file_data = interpolate(all_data[idx])
+        one_file_data = average(one_file_data)
+
+        one_file_data = median(one_file_data)
 
         if not (idx == white_idx or idx == black_idx):
             one_file_data = normalize(one_file_data, white_data_average, black_data_average)  # ToDO: interpolated?
 
-        one_file_data = median(one_file_data)
-        one_file_data = interpolate(one_file_data)
+        # one_file_data = interpolate(one_file_data)
 
         plot_name = data_namings[idx]
         normalized = True
@@ -124,14 +128,86 @@ def analyze(all_data: list[list[list[float]]], lambda_data: list[float], data_na
         elif idx == black_idx:
             plot_name = 'Black - ' + plot_name
             normalized = False
-        
-        plot(lambda_data, one_file_data, plot_name, normalized)
+
+        result.append(one_file_data)
+        # plot(lambda_data, one_file_data, plot_name, normalized)
+
+    return result
+
+
+def get_color_coefficients(filename: str) -> dict:
+    # lambda -> (x, y, z)
+    with open(filename, 'r') as f:
+        coefficients = list(map(lambda x: list(map(float, x.replace('\n', '').replace(',', '.').split())), f.readlines()))
+
+    # Interpolate for .lab delta lambda
+    result_dict = dict()
+
+    for _lambda, x, y, z in coefficients:
+        result_dict[_lambda] = (x, y, z)
+
+    return result_dict
+
+
+def calculate_interpolated_color_coefficients(_lambda: float, coefficients: dict) -> (float, float, float):
+    coefficients_list = [[], [], [], []]
+
+    for key in coefficients.keys():
+        coefficients_list[0].append(key)
+        coefficients_list[1].append(coefficients[key][0])
+        coefficients_list[2].append(coefficients[key][1])
+        coefficients_list[3].append(coefficients[key][2])
+
+    # lambda_array = [_lambda for _lambda, x, y, z in coefficients_list]
+    # x_array = [x for _lambda, x, y, z in coefficients_list]
+    # y_array = [y for _lambda, x, y, z in coefficients_list]
+    # z_array = [z for _lambda, x, y, z in coefficients_list]
+
+    lambda_array = coefficients_list[0]
+    x_array = coefficients_list[1]
+    y_array = coefficients_list[2]
+    z_array = coefficients_list[3]
+
+    return np.interp(_lambda, lambda_array, x_array), np.interp(_lambda, lambda_array, y_array), np.interp(_lambda, lambda_array, z_array)
+
+
+def get_coefficients_for(wavelength: float, color_coefficients: dict[float, (float, float, float)]) -> (float, float, float):
+    return calculate_interpolated_color_coefficients(wavelength, color_coefficients)
+
+
+def sum_of_one_color_data(data: list[float], lambda_data: list[float], color_coefficients: dict[float, (float, float, float)], k: int) -> float:
+    result = 0.0
+    length = len(lambda_data)
+    for i in range(0, length):
+        result += data[i] * get_coefficients_for(lambda_data[i], color_coefficients)[k]
+    return result
+
+
+def calculate_color_xyz(data_vector: list[float], lambda_data: list[float], color_coefficients: dict[float, (float, float, float)]) -> (float, float, float):
+    k_c = 100 / sum_of_one_color_data(data_vector, lambda_data, color_coefficients, 1) * DELTA_LAMBDA
+
+    x = k_c * sum_of_one_color_data(data_vector, lambda_data, color_coefficients, 0) * DELTA_LAMBDA
+    y = 100
+    z = k_c * sum_of_one_color_data(data_vector, lambda_data, color_coefficients, 2) * DELTA_LAMBDA
+
+    return x, y, z
+
+
+def xyz_to_rgb(x, y, z) -> (float, float, float):
+    return 3.24096994 * x - 1.53738318 * y - 0.49861076 * z, -0.96924364 * x + 1.8759675 * y + 0.0415506 * z, 0.05563008 * x - 0.20397696 * y + 1.05697151 * z
 
 
 if __name__ == "__main__":
+    # Const from .lab file
+    DELTA_LAMBDA = 0.086
+    LAMBDA_START = 400.022
+    LAMBDA_STOP = 699.978
+
     # Black and white indexes
     WHITE_IDX = 0
     BLACK_IDX = 2
+
+    color_coefficients = get_color_coefficients('coefficients.txt')
 
     # Getting files *.lab in current working directory
 
@@ -152,4 +228,10 @@ if __name__ == "__main__":
     # Cut lambda array due to using median
     lambda_data = lambda_data[2: len(lambda_data) - 2]
 
-    analyze(all_data, lambda_data, filenames, WHITE_IDX, BLACK_IDX)
+    processed_data = analyze(all_data, lambda_data, filenames, WHITE_IDX, BLACK_IDX)
+    calculated_colors = []
+
+    for vector in processed_data:
+        calculated_colors.append(xyz_to_rgb(*calculate_color_xyz(vector, lambda_data, color_coefficients)))
+
+    print(calculated_colors)  # ToDO: wrong answers -> negative rgb coordinates
