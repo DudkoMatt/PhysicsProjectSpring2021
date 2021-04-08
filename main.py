@@ -61,19 +61,27 @@ def get_all_vectors_from_file(filename: str, naming_pattern=r"^\[[0-9]*\]-.*-[0-
     return [vector[start:end] for vector in vectors], lambda_array[start:end]
 
 
-def average(arrays):
+def average(arrays: list[list[float]]) -> list[float]:
     result = []
     for i in range(len(arrays[0])):
         count = len(arrays)
         sum = 0
         for array in arrays:
             sum += array[i]
-        av = sum / count  # ToDo: ????? деление?
+        av = sum / count
         result.append(av)
     return result
 
 
-def median(array):
+def normalize(vector: list[float], white_vector: list[float], black_vector: list[float]) -> list[float]:
+    result = []
+    for idx in range(len(vector)):
+        result.append((vector[idx] - black_vector[idx]) / (white_vector[idx] - black_vector[idx]))
+    
+    return result
+
+
+def median(array: list[float]) -> list[float]:
     result = []
     for i in range(2, len(array) - 2):
         result.append(np.median(array[i-2:i+3]))
@@ -81,27 +89,48 @@ def median(array):
     return result
 
 
-def interpolate(array):
-    return savgol_filter(array, 5, 3)
+def interpolate(array: list[float], window_length=151, polyorder=1) -> np.ndarray:
+    return savgol_filter(array, window_length, polyorder)
 
 
-def plot(x, y, plot_name):
+def plot(x: list[float], y: np.ndarray, plot_name: str, normalised=True):
     matplotlib.pyplot.plot(x, y)
     matplotlib.pyplot.title(plot_name)
     matplotlib.pyplot.xlabel('λ, nm')
-    matplotlib.pyplot.ylabel('E')
+    matplotlib.pyplot.ylabel('E_0' if normalised else 'E')
     matplotlib.pyplot.show()
 
 
-def analyze(all_data, lambda_data, data_namings):
+def analyze(all_data: list[list[list[float]]], lambda_data: list[float], data_namings: list[str], white_idx: int, black_idx: int) -> None:
+    white_data_average = interpolate(average(all_data[white_idx]))
+    black_data_average = interpolate(average(all_data[black_idx]))
+
     for idx in range(len(all_data)):
         one_file_data = average(all_data[idx])
+
+        if not (idx == white_idx or idx == black_idx):
+            one_file_data = normalize(one_file_data, white_data_average, black_data_average)  # ToDO: interpolated?
+
         one_file_data = median(one_file_data)
         one_file_data = interpolate(one_file_data)
-        plot(lambda_data, one_file_data, data_namings[idx])
+
+        plot_name = data_namings[idx]
+        normalized = True
+        if idx == white_idx:
+            plot_name = 'White - ' + plot_name
+            normalized = False
+        elif idx == black_idx:
+            plot_name = 'Black - ' + plot_name
+            normalized = False
+        
+        plot(lambda_data, one_file_data, plot_name, normalized)
 
 
 if __name__ == "__main__":
+    # Black and white indexes
+    WHITE_IDX = 0
+    BLACK_IDX = 2
+
     # Getting files *.lab in current working directory
 
     only_files = [f for f in listdir(getcwd()) if isfile(join(getcwd(), f))]
@@ -121,4 +150,4 @@ if __name__ == "__main__":
     # Cut lambda array due to using median
     lambda_data = lambda_data[2: len(lambda_data) - 2]
 
-    analyze(all_data, lambda_data, filenames)
+    analyze(all_data, lambda_data, filenames, WHITE_IDX, BLACK_IDX)
