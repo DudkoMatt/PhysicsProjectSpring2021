@@ -149,9 +149,10 @@ class InterpolatedColorCoefficients:
     z_func: Callable[[float], float]
 
     def __init__(self, filename='coefficients.txt') -> None:
-        self.filename = filename
-        self.color_coefficients = self.get_color_coefficients(filename)
-        self.x_func, self.y_func, self.z_func = self.__interpolate_color_coefficients()
+        # self.filename = filename
+        # self.color_coefficients = self.get_color_coefficients(filename)
+        # self.x_func, self.y_func, self.z_func = self.__interpolate_color_coefficients()
+        pass
 
     @staticmethod
     def get_color_coefficients(filename: str) -> dict:
