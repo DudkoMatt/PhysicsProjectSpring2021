@@ -228,7 +228,7 @@ class Coefficient:
         return self.__add__(other)
 
 
-def sum_of_one_color_data(data: list[float], lambda_data: list[float], color_coefficients: InterpolatedColorCoefficients) -> Coefficient:
+def sum_of_one_vector_data(data: list[float], lambda_data: list[float], color_coefficients: InterpolatedColorCoefficients) -> Coefficient:
     result = Coefficient(0, 0, 0)
     length = len(lambda_data)
     for i in range(0, length):
@@ -237,7 +237,7 @@ def sum_of_one_color_data(data: list[float], lambda_data: list[float], color_coe
 
 
 def calculate_color_xyz(data_vector: list[float], lambda_data: list[float], color_coefficients: InterpolatedColorCoefficients) -> (float, float, float):
-    coefficient = sum_of_one_color_data(data_vector, lambda_data, color_coefficients)
+    coefficient = sum_of_one_vector_data(data_vector, lambda_data, color_coefficients)
     k_c = 100 / coefficient.y
 
     x = k_c * coefficient.x
