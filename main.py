@@ -6,6 +6,8 @@ import numpy as np
 import re
 from os import listdir, getcwd
 from os.path import isfile, join
+from typing import Callable
+import sys
 
 
 # Getting vectors from file
@@ -208,6 +210,8 @@ def xyz_to_rgb(x, y, z) -> (float, float, float):
 
 
 if __name__ == "__main__":
+    assert sys.version_info >= (3, 9)
+
     # Const from .lab file
     DELTA_LAMBDA = 0.086
     # ToDO: больше нет необхоимости
