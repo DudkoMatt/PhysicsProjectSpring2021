@@ -1,4 +1,6 @@
+import os
 from scipy.signal import savgol_filter
+from scipy import interpolate as interp
 import matplotlib.pyplot
 import numpy as np
 import re
@@ -54,14 +56,14 @@ def get_all_vectors_from_file(filename: str, naming_pattern=r"^\[[0-9]*\]-.*-[0-
 
         vectors.append(list(map(float, data)))
 
-    start = np.where(np.array(lambda_array) >= 400)[0][0]
-    end_gt_400 = np.where(np.array(lambda_array) >= 400)[0][-1] + 1
-    end = np.where(np.array(lambda_array[:end_gt_400]) <= 700)[0][-1] + 1
+    start = np.where(np.array(lambda_array) >= 410)[0][0]
+    end_gt_410 = np.where(np.array(lambda_array) >= 410)[0][-1] + 1
+    end = np.where(np.array(lambda_array[:end_gt_410]) <= 700)[0][-1] + 1
 
     return [vector[start:end] for vector in vectors], lambda_array[start:end]
 
 
-def average(arrays: list[list[float]]) -> list[float]:
+def average(arrays: list[list[float]]) -> list[float]:  # ToDO: refactor
     result = []
     for i in range(len(arrays[0])):
         count = len(arrays)
@@ -89,7 +91,7 @@ def median(array: list[float]) -> list[float]:
     return result
 
 
-def interpolate(array: list[float], window_length=31, polyorder=3) -> np.ndarray:
+def interpolate(array: list[float], window_length=151, polyorder=1) -> np.ndarray:
     return savgol_filter(array, window_length, polyorder)
 
 
@@ -104,21 +106,22 @@ def plot(x: list[float], y: np.ndarray, plot_name: str, normalised=True):
 
 
 def analyze(all_data: list[list[list[float]]], lambda_data: list[float], data_namings: list[str], white_idx: int, black_idx: int) -> list[list[float]]:
-    white_data_average = interpolate(average(all_data[white_idx]))
-    black_data_average = interpolate(average(all_data[black_idx]))
+    white_data_average = average(all_data[white_idx])
+    black_data_average = average(all_data[black_idx])
 
     result = []
 
     for idx in range(len(all_data)):
-        one_file_data = interpolate(all_data[idx])
-        one_file_data = average(one_file_data)
+        # one_file_data = interpolate(all_data[idx])
+        one_file_data = average(all_data[idx])
+        # one_file_data = average(one_file_data)
 
         one_file_data = median(one_file_data)
 
         if not (idx == white_idx or idx == black_idx):
             one_file_data = normalize(one_file_data, white_data_average, black_data_average)  # ToDO: interpolated?
 
-        # one_file_data = interpolate(one_file_data)
+        one_file_data = interpolate(one_file_data)
 
         plot_name = data_namings[idx]
         normalized = True
@@ -130,7 +133,7 @@ def analyze(all_data: list[list[list[float]]], lambda_data: list[float], data_na
             normalized = False
 
         result.append(one_file_data)
-        # plot(lambda_data, one_file_data, plot_name, normalized)
+        plot(lambda_data, one_file_data, plot_name, normalized)
 
     return result
 
@@ -147,6 +150,12 @@ def get_color_coefficients(filename: str) -> dict:
         result_dict[_lambda] = (x, y, z)
 
     return result_dict
+
+
+class InterpolatedColorCoefficients:
+    def __init__(self, filename='coefficients.txt') -> None:
+        # ToDO: refactoring
+        pass
 
 
 def calculate_interpolated_color_coefficients(_lambda: float, coefficients: dict) -> (float, float, float):
@@ -168,7 +177,8 @@ def calculate_interpolated_color_coefficients(_lambda: float, coefficients: dict
     y_array = coefficients_list[2]
     z_array = coefficients_list[3]
 
-    return np.interp(_lambda, lambda_array, x_array), np.interp(_lambda, lambda_array, y_array), np.interp(_lambda, lambda_array, z_array)
+    # ToDO: not working --> need to move to the class defined above. Note: interp1d returns a function
+    return interp.interp1d(_lambda, lambda_array, x_array), interp.interp1d(_lambda, lambda_array, y_array), interp.interp1d(_lambda, lambda_array, z_array)
 
 
 def get_coefficients_for(wavelength: float, color_coefficients: dict[float, (float, float, float)]) -> (float, float, float):
@@ -200,16 +210,19 @@ def xyz_to_rgb(x, y, z) -> (float, float, float):
 if __name__ == "__main__":
     # Const from .lab file
     DELTA_LAMBDA = 0.086
-    LAMBDA_START = 400.022
-    LAMBDA_STOP = 699.978
+    # ToDO: больше нет необхоимости
+    # LAMBDA_START = 400.022
+    # LAMBDA_STOP = 699.978
 
     # Black and white indexes
     WHITE_IDX = 0
-    BLACK_IDX = 2
+    BLACK_IDX = 1
 
     color_coefficients = get_color_coefficients('coefficients.txt')
 
     # Getting files *.lab in current working directory
+
+    os.chdir("Data_from_12.04.2021\\Try #3\\")
 
     only_files = [f for f in listdir(getcwd()) if isfile(join(getcwd(), f))]
     files = list(filter(lambda x: re.match(r'.*\.lab$', x), only_files))
@@ -228,8 +241,30 @@ if __name__ == "__main__":
     # Cut lambda array due to using median
     lambda_data = lambda_data[2: len(lambda_data) - 2]
 
+    # ------------------------------ Тестирование интерполяции --------------------------------------------------------
+    # # ToDO
+    #
+    # coefficients_list = [[], [], [], []]
+    #
+    # for key in color_coefficients.keys():
+    #     coefficients_list[0].append(key)
+    #     coefficients_list[1].append(color_coefficients[key][0])
+    #     coefficients_list[2].append(color_coefficients[key][1])
+    #     coefficients_list[3].append(color_coefficients[key][2])
+    #
+    # interpolated_x = np.interp(lambda_data, coefficients_list[0], coefficients_list[1])
+    # interpolated_y = np.interp(lambda_data, coefficients_list[0], coefficients_list[2])
+    # interpolated_z = np.interp(lambda_data, coefficients_list[0], coefficients_list[3])
+    #
+    # # ToDO: построить графики -> коэффициенты до интеполяции и после интерполяции (3 * 2 графика для каждой из координат)
+    #
+    # exit(0)  # ToDO: убрать
+    # -----------------------------------------------------------------------------------------------------------------
+
     processed_data = analyze(all_data, lambda_data, filenames, WHITE_IDX, BLACK_IDX)
     calculated_colors = []
+
+    exit(0)  # ToDO
 
     for vector in processed_data:
         calculated_colors.append(xyz_to_rgb(*calculate_color_xyz(vector, lambda_data, color_coefficients)))
