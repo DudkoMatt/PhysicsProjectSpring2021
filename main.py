@@ -184,7 +184,35 @@ class InterpolatedColorCoefficients:
             interp.interp1d(lambda_array, z_array)
 
     def get_coefficients_for(self, wavelength: float) -> (float, float, float):
-        return Coefficient(self.x_func(wavelength), self.y_func(wavelength), self.z_func(wavelength))
+        # TODO: SWITCH ------------------------------------------------------------------------------------------------------------------------------------------
+        # return Coefficient(self.x_func(wavelength), self.y_func(wavelength), self.z_func(wavelength))
+        return Coefficient(*InterpolatedColorCoefficients.get_color_coefficients_for(wavelength))
+
+    @staticmethod
+    def gaussian(x, alpha, mu, sigma_1, sigma_2):
+        return alpha * np.exp(-((x - mu) / (sigma_1 if x < mu else sigma_2)) ** 2 / 2)
+
+    @staticmethod
+    def x_coefficient_CIE_1931(wavelength):
+        return InterpolatedColorCoefficients.gaussian(wavelength, 1.056, 599.8, 379, 310) \
+               + InterpolatedColorCoefficients.gaussian(wavelength, 0.362, 442.0, 160, 267) \
+               + InterpolatedColorCoefficients.gaussian(wavelength, -0.065, 501.1, 204, 262)
+
+    @staticmethod
+    def y_coefficient_CIE_1931(wavelength):
+        return InterpolatedColorCoefficients.gaussian(wavelength, 0.821, 568.8, 469, 405) \
+               + InterpolatedColorCoefficients.gaussian(wavelength, 0.286, 530.9, 163, 311)
+
+    @staticmethod
+    def z_coefficient_CIE_1931(wavelength):
+        return InterpolatedColorCoefficients.gaussian(wavelength, 1.217, 437.0, 118, 360) \
+               + InterpolatedColorCoefficients.gaussian(wavelength, 0.681, 459.0, 260, 138)
+
+    @staticmethod
+    def get_color_coefficients_for(wavelength):
+        return InterpolatedColorCoefficients.x_coefficient_CIE_1931(wavelength), \
+               InterpolatedColorCoefficients.y_coefficient_CIE_1931(wavelength), \
+               InterpolatedColorCoefficients.z_coefficient_CIE_1931(wavelength)
 
 
 class Coefficient:
