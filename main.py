@@ -81,7 +81,7 @@ def normalize(vector: list[float], white_vector: list[float], black_vector: list
     result = []
     for idx in range(len(vector)):
         result.append((vector[idx] - black_vector[idx]) / (white_vector[idx] - black_vector[idx]))
-    
+
     return result
 
 
@@ -141,72 +141,113 @@ def analyze(all_data: list[list[list[float]]], lambda_data: list[float], data_na
     return result
 
 
-def get_color_coefficients(filename: str) -> dict:
-    # lambda -> (x, y, z)
-    with open(filename, 'r') as f:
-        coefficients = list(map(lambda x: list(map(float, x.replace('\n', '').replace(',', '.').split())), f.readlines()))
-
-    # Interpolate for .lab delta lambda
-    result_dict = dict()
-
-    for _lambda, x, y, z in coefficients:
-        result_dict[_lambda] = (x, y, z)
-
-    return result_dict
-
-
 class InterpolatedColorCoefficients:
+    filename: str
+    color_coefficients: dict  # lambda -> (x, y, z)
+    x_func: Callable[[float], float]
+    y_func: Callable[[float], float]
+    z_func: Callable[[float], float]
+
     def __init__(self, filename='coefficients.txt') -> None:
-        # ToDO: refactoring
-        pass
+        self.filename = filename
+        self.color_coefficients = self.get_color_coefficients(filename)
+        self.x_func, self.y_func, self.z_func = self.__interpolate_color_coefficients()
+
+    @staticmethod
+    def get_color_coefficients(filename: str) -> dict:
+        # lambda -> (x, y, z)
+        with open(filename, 'r') as f:
+            coefficients = list(
+                map(lambda item: list(map(float, item.replace('\n', '').replace(',', '.').split())), f.readlines()))
+
+        result_dict = dict()
+        for _lambda, x, y, z in coefficients:
+            result_dict[_lambda] = (x, y, z)
+
+        return result_dict
+
+    def __interpolate_color_coefficients(self) -> (Callable[[float], float], Callable[[float], float], Callable[[float], float]):
+        lambda_array = []
+        x_array = []
+        y_array = []
+        z_array = []
+
+        for key in self.color_coefficients.keys():
+            lambda_array.append(key)
+            x_array.append(self.color_coefficients[key][0])
+            y_array.append(self.color_coefficients[key][1])
+            z_array.append(self.color_coefficients[key][2])
+
+        return \
+            interp.interp1d(lambda_array, x_array), \
+            interp.interp1d(lambda_array, y_array), \
+            interp.interp1d(lambda_array, z_array)
+
+    def get_coefficients_for(self, wavelength: float) -> (float, float, float):
+        return Coefficient(self.x_func(wavelength), self.y_func(wavelength), self.z_func(wavelength))
 
 
-def calculate_interpolated_color_coefficients(_lambda: float, coefficients: dict) -> (float, float, float):
-    coefficients_list = [[], [], [], []]
+class Coefficient:
+    x: float
+    y: float
+    z: float
 
-    for key in coefficients.keys():
-        coefficients_list[0].append(key)
-        coefficients_list[1].append(coefficients[key][0])
-        coefficients_list[2].append(coefficients[key][1])
-        coefficients_list[3].append(coefficients[key][2])
+    def __init__(self, x: float, y: float, z: float) -> None:
+        self.x = x
+        self.y = y
+        self.z = z
 
-    # lambda_array = [_lambda for _lambda, x, y, z in coefficients_list]
-    # x_array = [x for _lambda, x, y, z in coefficients_list]
-    # y_array = [y for _lambda, x, y, z in coefficients_list]
-    # z_array = [z for _lambda, x, y, z in coefficients_list]
+    def __mul__(self, other):
+        assert isinstance(other, float)
 
-    lambda_array = coefficients_list[0]
-    x_array = coefficients_list[1]
-    y_array = coefficients_list[2]
-    z_array = coefficients_list[3]
+        self.x *= other
+        self.y *= other
+        self.z *= other
 
-    # ToDO: not working --> need to move to the class defined above. Note: interp1d returns a function
-    return interp.interp1d(_lambda, lambda_array, x_array), interp.interp1d(_lambda, lambda_array, y_array), interp.interp1d(_lambda, lambda_array, z_array)
+        return self
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __add__(self, other):
+        assert isinstance(other, Coefficient)
+
+        self.x += other.x
+        self.y += other.y
+        self.z += other.z
+
+        return self
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __iadd__(self, other):
+        return self.__add__(other)
+
+    def __imul__(self, other):
+        return self.__add__(other)
 
 
-def get_coefficients_for(wavelength: float, color_coefficients: dict[float, (float, float, float)]) -> (float, float, float):
-    return calculate_interpolated_color_coefficients(wavelength, color_coefficients)
-
-
-def sum_of_one_color_data(data: list[float], lambda_data: list[float], color_coefficients: dict[float, (float, float, float)], k: int) -> float:
-    result = 0.0
+def sum_of_one_color_data(data: list[float], lambda_data: list[float], color_coefficients: InterpolatedColorCoefficients) -> Coefficient:
+    result = Coefficient(0, 0, 0)
     length = len(lambda_data)
     for i in range(0, length):
-        result += data[i] * get_coefficients_for(lambda_data[i], color_coefficients)[k]
+        result += data[i] * color_coefficients.get_coefficients_for(lambda_data[i]) * DELTA_LAMBDA
     return result
 
 
-def calculate_color_xyz(data_vector: list[float], lambda_data: list[float], color_coefficients: dict[float, (float, float, float)]) -> (float, float, float):
-    k_c = 100 / sum_of_one_color_data(data_vector, lambda_data, color_coefficients, 1) * DELTA_LAMBDA
+def calculate_color_xyz(data_vector: list[float], lambda_data: list[float], color_coefficients: InterpolatedColorCoefficients) -> (float, float, float):
+    coefficient = sum_of_one_color_data(data_vector, lambda_data, color_coefficients)
+    k_c = 100 / coefficient.y
 
-    x = k_c * sum_of_one_color_data(data_vector, lambda_data, color_coefficients, 0) * DELTA_LAMBDA
+    x = k_c * coefficient.x
     y = 100
-    z = k_c * sum_of_one_color_data(data_vector, lambda_data, color_coefficients, 2) * DELTA_LAMBDA
+    z = k_c * coefficient.z
 
     return x, y, z
 
 
-def xyz_to_rgb(x, y, z) -> (float, float, float):
+def xyz_to_rgb(x: float, y: float, z: float) -> (float, float, float):
     return 3.24096994 * x - 1.53738318 * y - 0.49861076 * z, -0.96924364 * x + 1.8759675 * y + 0.0415506 * z, 0.05563008 * x - 0.20397696 * y + 1.05697151 * z
 
 
@@ -223,7 +264,7 @@ if __name__ == "__main__":
     WHITE_IDX = 0
     BLACK_IDX = 1
 
-    color_coefficients = get_color_coefficients('coefficients.txt')
+    color_coefficients = InterpolatedColorCoefficients('coefficients.txt')
 
     # Getting files *.lab in current working directory
 
@@ -269,9 +310,11 @@ if __name__ == "__main__":
     processed_data = analyze(all_data, lambda_data, filenames, WHITE_IDX, BLACK_IDX)
     calculated_colors = []
 
-    exit(0)  # ToDO
+    xyz_file = open('xyz.txt', 'w')
 
     for vector in processed_data:
-        calculated_colors.append(xyz_to_rgb(*calculate_color_xyz(vector, lambda_data, color_coefficients)))
+        xyz_coord = calculate_color_xyz(vector, lambda_data, color_coefficients)
+        print(xyz_coord, file=xyz_file)
+        calculated_colors.append(xyz_to_rgb(*xyz_coord))
 
-    print(calculated_colors)  # ToDO: wrong answers -> negative rgb coordinates
+    print(*calculated_colors, sep='\n', file=open('output.txt', 'w'))  # ToDO: wrong answers -> negative rgb coordinates
