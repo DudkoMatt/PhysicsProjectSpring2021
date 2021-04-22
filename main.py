@@ -98,6 +98,7 @@ def interpolate(array: list[float], window_length=151, polyorder=1) -> np.ndarra
 
 
 def plot(x: list[float], y: np.ndarray, plot_name: str, normalised=True):
+    return   # -----------------------------------------------------TODO: REMOVE!----------------------------------------------------------------------------------------------------
     matplotlib.pyplot.plot(x, y)
     matplotlib.pyplot.title(plot_name)
     matplotlib.pyplot.xlabel('λ, nm')
