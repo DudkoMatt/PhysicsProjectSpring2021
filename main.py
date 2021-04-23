@@ -3,6 +3,7 @@ from scipy.signal import savgol_filter
 from scipy import interpolate as interp
 import matplotlib.pyplot
 import numpy as np
+from numpy import linalg as LA
 import re
 from os import listdir, getcwd
 from os.path import isfile, join
@@ -11,7 +12,8 @@ import sys
 
 
 # Getting vectors from file
-def get_all_vectors_from_file(filename: str, naming_pattern=r"^\[[0-9]*\]-.*-[0-9]*_E$") -> [list[list[float]], list[float]]:
+def get_all_vectors_from_file(filename: str, naming_pattern=r"^\[[0-9]*\]-.*-[0-9]*_E$") -> [list[list[float]],
+                                                                                             list[float]]:
     """
     Filtering data from *.lab
     :param filename: name of the file
@@ -88,7 +90,7 @@ def normalize(vector: list[float], white_vector: list[float], black_vector: list
 def median(array: list[float]) -> list[float]:
     result = []
     for i in range(2, len(array) - 2):
-        result.append(np.median(array[i-2:i+3]))
+        result.append(np.median(array[i - 2:i + 3]))
 
     return result
 
@@ -108,7 +110,8 @@ def plot(x: list[float], y: np.ndarray, plot_name: str, normalised=True):
     matplotlib.pyplot.show()
 
 
-def analyze(all_data: list[list[list[float]]], lambda_data: list[float], data_namings: list[str], white_idx: int, black_idx: int) -> list[list[float]]:
+def analyze(all_data: list[list[list[float]]], lambda_data: list[float], data_namings: list[str], white_idx: int,
+            black_idx: int) -> list[list[float]]:
     white_data_average = average(all_data[white_idx])
     black_data_average = average(all_data[black_idx])
 
@@ -149,10 +152,10 @@ class InterpolatedColorCoefficients:
     z_func: Callable[[float], float]
 
     def __init__(self, filename='coefficients.txt') -> None:
-        # self.filename = filename
-        # self.color_coefficients = self.get_color_coefficients(filename)
-        # self.x_func, self.y_func, self.z_func = self.__interpolate_color_coefficients()
-        pass
+        self.filename = filename
+        self.color_coefficients = self.get_color_coefficients(filename)
+        self.x_func, self.y_func, self.z_func = self.__interpolate_color_coefficients()
+        # pass
 
     @staticmethod
     def get_color_coefficients(filename: str) -> dict:
@@ -167,7 +170,8 @@ class InterpolatedColorCoefficients:
 
         return result_dict
 
-    def __interpolate_color_coefficients(self) -> (Callable[[float], float], Callable[[float], float], Callable[[float], float]):
+    def __interpolate_color_coefficients(self) -> (
+    Callable[[float], float], Callable[[float], float], Callable[[float], float]):
         lambda_array = []
         x_array = []
         y_array = []
@@ -186,8 +190,8 @@ class InterpolatedColorCoefficients:
 
     def get_coefficients_for(self, wavelength: float) -> (float, float, float):
         # TODO: SWITCH ------------------------------------------------------------------------------------------------------------------------------------------
-        # return Coefficient(self.x_func(wavelength), self.y_func(wavelength), self.z_func(wavelength))
-        return Coefficient(*InterpolatedColorCoefficients.get_color_coefficients_for(wavelength))
+        return Coefficient(self.x_func(wavelength), self.y_func(wavelength), self.z_func(wavelength))
+        # return Coefficient(*InterpolatedColorCoefficients.get_color_coefficients_for(wavelength))
 
     @staticmethod
     def gaussian(x, alpha, mu, sigma_1, sigma_2):
@@ -257,7 +261,8 @@ class Coefficient:
         return self.__add__(other)
 
 
-def sum_of_one_vector_data(data: list[float], lambda_data: list[float], color_coefficients: InterpolatedColorCoefficients) -> Coefficient:
+def sum_of_one_vector_data(data: list[float], lambda_data: list[float],
+                           color_coefficients: InterpolatedColorCoefficients) -> Coefficient:
     result = Coefficient(0, 0, 0)
     length = len(lambda_data)
     for i in range(0, length):
@@ -265,7 +270,8 @@ def sum_of_one_vector_data(data: list[float], lambda_data: list[float], color_co
     return result
 
 
-def calculate_color_xyz(data_vector: list[float], lambda_data: list[float], color_coefficients: InterpolatedColorCoefficients) -> (float, float, float):
+def calculate_color_xyz(data_vector: list[float], lambda_data: list[float],
+                        color_coefficients: InterpolatedColorCoefficients) -> (float, float, float):
     coefficient = sum_of_one_vector_data(data_vector, lambda_data, color_coefficients)
     k_c = 100 / coefficient.y
 
@@ -276,8 +282,61 @@ def calculate_color_xyz(data_vector: list[float], lambda_data: list[float], colo
     return x, y, z
 
 
-def xyz_to_rgb(x: float, y: float, z: float) -> (float, float, float):
-    return 3.24096994 * x - 1.53738318 * y - 0.49861076 * z, -0.96924364 * x + 1.8759675 * y + 0.0415506 * z, 0.05563008 * x - 0.20397696 * y + 1.05697151 * z
+class TransitionCoefficient:
+    x: float
+    y: float
+    z: float
+
+    def __init__(self, x: float, y: float) -> None:
+        self.x = x / y
+        self.y = 1
+        self.z = (1 - x - y) / y
+
+
+def get_white_coefficient():
+    x_w = 109.850  # ToDo коэффициенты взяты со стр 110 для источника A
+    y_w = 100
+    z_w = 35.585
+    return np.array([[x_w], [y_w], [z_w]])
+
+
+def get_inverse_m_matrix():
+    # x_r = 0.7350  # ToDo коэффициенты из приложения 4 книжки на стр 111 тип CIE RGB
+    # y_r = 0.2650  # ToDo
+    # x_g = 0.2740  # ToDo
+    # y_g = 0.7170  # ToDo
+    # x_b = 0.1670  # ToDo
+    # y_b = 0.0090  # ToDo
+
+    x_r = 0.6400  # ToDo коэффициенты из приложения 4 книжки на стр 111 тип Adobe RGB
+    y_r = 0.3300  # ToDo
+    x_g = 0.2100  # ToDo
+    y_g = 0.7100  # ToDo
+    x_b = 0.1500  # ToDo
+    y_b = 0.0600  # ToDo
+    r_avg = TransitionCoefficient(x_r, y_r)
+    g_avg = TransitionCoefficient(x_g, y_g)
+    b_avg = TransitionCoefficient(x_b, y_b)
+    s = (LA.inv(np.array([[r_avg.x, g_avg.x, b_avg.x], [r_avg.y, g_avg.y, b_avg.y], [r_avg.z, g_avg.z, b_avg.z]]))).dot(
+        get_white_coefficient())
+    s_r = s[0, 0]
+    s_g = s[1, 0]
+    s_b = s[2, 0]
+    return LA.inv(np.array(
+        [[s_r * r_avg.x, s_g * g_avg.x, s_b * b_avg.x], [s_r * r_avg.y, s_g * g_avg.y, s_b * b_avg.y],
+         [s_r * r_avg.z, s_g * g_avg.z, s_b * b_avg.z]]))
+
+
+def xyz_to_linear_rgb(x: float, y: float, z: float) -> (float, float, float):
+    return get_inverse_m_matrix().dot(np.array([[x], [y], [z]]))[0, 0], \
+           get_inverse_m_matrix().dot(np.array([[x], [y], [z]]))[1, 0], \
+           get_inverse_m_matrix().dot(np.array([[x], [y], [z]]))[2, 0]
+
+
+def linear_rgb_to_non_linear_rgb(x: float, y: float, z: float) -> (float, float, float):
+    x_linear, y_linear, z_linear = xyz_to_linear_rgb(x, y, z)
+    gamma = 2.2  # ToDo
+    return x_linear ** (1 / gamma), y_linear ** (1 / gamma), z_linear ** (1 / gamma)
 
 
 if __name__ == "__main__":
@@ -344,6 +403,6 @@ if __name__ == "__main__":
     for vector in processed_data:
         xyz_coord = calculate_color_xyz(vector, lambda_data, color_coefficients)
         print(xyz_coord, file=xyz_file)
-        calculated_colors.append(xyz_to_rgb(*xyz_coord))
+        calculated_colors.append(xyz_to_linear_rgb(*xyz_coord))
 
     print(*calculated_colors, sep='\n', file=open('output.txt', 'w'))  # ToDO: wrong answers -> negative rgb coordinates
