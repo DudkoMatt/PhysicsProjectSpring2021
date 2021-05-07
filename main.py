@@ -270,6 +270,7 @@ def sum_of_one_vector_data(data: list[float], lambda_data: list[float],
     return result
 
 
+# ToDO: new --> returning data in range [0, 1]
 def calculate_color_xyz(data_vector: list[float], lambda_data: list[float],
                         color_coefficients: InterpolatedColorCoefficients) -> (float, float, float):
     coefficient = sum_of_one_vector_data(data_vector, lambda_data, color_coefficients)
@@ -279,7 +280,7 @@ def calculate_color_xyz(data_vector: list[float], lambda_data: list[float],
     y = 100
     z = k_c * coefficient.z
 
-    return x, y, z
+    return (X := x / (x + y + z)), (Y := y / (x + y + z)), 1 - X - Y  # z / (x + y + z)
 
 
 class TransitionCoefficient:
@@ -301,19 +302,19 @@ def get_white_coefficient():
 
 
 def get_inverse_m_matrix():
-    # x_r = 0.7350  # ToDo коэффициенты из приложения 4 книжки на стр 111 тип CIE RGB
-    # y_r = 0.2650  # ToDo
-    # x_g = 0.2740  # ToDo
-    # y_g = 0.7170  # ToDo
-    # x_b = 0.1670  # ToDo
-    # y_b = 0.0090  # ToDo
+    x_r = 0.7350  # ToDo коэффициенты из приложения 4 книжки на стр 111 тип CIE RGB
+    y_r = 0.2650  # ToDo
+    x_g = 0.2740  # ToDo
+    y_g = 0.7170  # ToDo
+    x_b = 0.1670  # ToDo
+    y_b = 0.0090  # ToDo
 
-    x_r = 0.6400  # ToDo коэффициенты из приложения 4 книжки на стр 111 тип Adobe RGB
-    y_r = 0.3300  # ToDo
-    x_g = 0.2100  # ToDo
-    y_g = 0.7100  # ToDo
-    x_b = 0.1500  # ToDo
-    y_b = 0.0600  # ToDo
+    # x_r = 0.6400  # ToDo коэффициенты из приложения 4 книжки на стр 111 тип Adobe RGB
+    # y_r = 0.3300  # ToDo
+    # x_g = 0.2100  # ToDo
+    # y_g = 0.7100  # ToDo
+    # x_b = 0.1500  # ToDo
+    # y_b = 0.0600  # ToDo
     r_avg = TransitionCoefficient(x_r, y_r)
     g_avg = TransitionCoefficient(x_g, y_g)
     b_avg = TransitionCoefficient(x_b, y_b)
@@ -327,10 +328,10 @@ def get_inverse_m_matrix():
          [s_r * r_avg.z, s_g * g_avg.z, s_b * b_avg.z]]))
 
 
+# ToDO: теперь принимаем новые коэффициенты от 0 до 1
 def xyz_to_linear_rgb(x: float, y: float, z: float) -> (float, float, float):
-    return get_inverse_m_matrix().dot(np.array([[x], [y], [z]]))[0, 0], \
-           get_inverse_m_matrix().dot(np.array([[x], [y], [z]]))[1, 0], \
-           get_inverse_m_matrix().dot(np.array([[x], [y], [z]]))[2, 0]
+    result_vector = get_inverse_m_matrix().dot(np.array([[x], [y], [z]]))
+    return result_vector[0, 0], result_vector[1, 0], result_vector[2, 0]
 
 
 def linear_rgb_to_non_linear_rgb(x: float, y: float, z: float) -> (float, float, float):
@@ -400,9 +401,12 @@ if __name__ == "__main__":
 
     xyz_file = open('xyz.txt', 'w')
 
+    k = 0
+
     for vector in processed_data:
         xyz_coord = calculate_color_xyz(vector, lambda_data, color_coefficients)
-        print(xyz_coord, file=xyz_file)
+        print(xyz_coord, filenames[k], file=xyz_file)
+        k += 1
         calculated_colors.append(xyz_to_linear_rgb(*xyz_coord))
 
     print(*calculated_colors, sep='\n', file=open('output.txt', 'w'))  # ToDO: wrong answers -> negative rgb coordinates
