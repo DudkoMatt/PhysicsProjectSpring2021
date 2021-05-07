@@ -263,6 +263,3 @@ pyvenv.cfg
 pip-selfcheck.json
 
 # End of https://www.toptal.com/developers/gitignore/api/pycharm+all,venv,python,jupyternotebooks
-Data_from_05.04.2021/01.lab
-*.lab
-.DS_Store

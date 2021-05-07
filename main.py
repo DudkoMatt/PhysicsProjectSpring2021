@@ -9,6 +9,7 @@ from os import listdir, getcwd
 from os.path import isfile, join
 from typing import Callable
 import sys
+import platform
 
 
 # Getting vectors from file
@@ -357,7 +358,8 @@ if __name__ == "__main__":
 
     # Getting files *.lab in current working directory
 
-    os.chdir("Data_from_12.04.2021\\Try #3\\")
+    os.chdir("Data_from_12.04.2021")
+    os.chdir("Try_#3")
 
     only_files = [f for f in listdir(getcwd()) if isfile(join(getcwd(), f))]
     files = list(filter(lambda x: re.match(r'.*\.lab$', x), only_files))
@@ -399,7 +401,10 @@ if __name__ == "__main__":
     processed_data = analyze(all_data, lambda_data, filenames, WHITE_IDX, BLACK_IDX)
     calculated_colors = []
 
-    xyz_file = open('xyz.txt', 'w')
+    if platform.system() == "Windows":
+        xyz_file = open('xyz.txt', 'w')
+    else:
+        xyz_file = open('/Users/igorklyuzev/ITMO/4_семестр/Физика/PhysicsProjectSpring2021/xyz.txt', 'w')
 
     k = 0
 
@@ -408,5 +413,7 @@ if __name__ == "__main__":
         print(xyz_coord, filenames[k], file=xyz_file)
         k += 1
         calculated_colors.append(xyz_to_linear_rgb(*xyz_coord))
-
-    print(*calculated_colors, sep='\n', file=open('output.txt', 'w'))  # ToDO: wrong answers -> negative rgb coordinates
+    if platform.system() == "Windows":
+        print(*calculated_colors, sep='\n', file=open('output.txt', 'w'))  # ToDO: wrong answers -> negative rgb coordinates
+    else:
+        print(*calculated_colors, sep='\n', file=open('/Users/igorklyuzev/ITMO/4_семестр/Физика/PhysicsProjectSpring2021/output.txt', 'w'))  # ToDO: wrong answers -> negative rgb coordinates
