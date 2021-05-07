@@ -69,6 +69,12 @@ def get_all_vectors_from_file(filename: str, naming_pattern=r"^\[[0-9]*\]-.*-[0-
 
 
 def average(arrays: list[list[float]]) -> list[float]:  # ToDO: refactor
+    """
+    Get the average for each row in 2-d array
+    :param arrays: 2-d array, each list (column) is one measure
+    :return: 1-d array with average for each row
+    """
+
     result = []
     for i in range(len(arrays[0])):
         count = len(arrays)
@@ -81,6 +87,14 @@ def average(arrays: list[list[float]]) -> list[float]:  # ToDO: refactor
 
 
 def normalize(vector: list[float], white_vector: list[float], black_vector: list[float]) -> list[float]:
+    """
+    Normalize vector data to range [0, 1] relative to white vector data and black vector data
+    :param vector: vector data (one measurement)
+    :param white_vector: vector data of white color
+    :param black_vector: vector data of black color
+    :return: normalized vector data relative to white and black colors
+    """
+
     result = []
     for idx in range(len(vector)):
         result.append((vector[idx] - black_vector[idx]) / (white_vector[idx] - black_vector[idx]))
@@ -89,6 +103,12 @@ def normalize(vector: list[float], white_vector: list[float], black_vector: list
 
 
 def median(array: list[float]) -> list[float]:
+    """
+    Apply median filtering and cut vector data (reduced by 4 elements)
+    :param array: vector data (one measurement)
+    :return: vector data after filtering
+    """
+
     result = []
     for i in range(2, len(array) - 2):
         result.append(np.median(array[i - 2:i + 3]))
@@ -97,10 +117,27 @@ def median(array: list[float]) -> list[float]:
 
 
 def interpolate(array: list[float], window_length=151, polyorder=1) -> np.ndarray:
+    """
+    Apply filtering and interpolating (savgol_filter) to vector data
+    :param array: vector data (one measurement)
+    :param window_length: parameter for savgol_filter
+    :param polyorder: parameter for savgol_filter
+    :return: vector data after filtering and interpolating
+    """
+
     return savgol_filter(array, window_length, polyorder)
 
 
 def plot(x: list[float], y: np.ndarray, plot_name: str, normalised=True):
+    """
+    Plotting data with matplotlib
+    :param x: x values vector data
+    :param y: y values vector data
+    :param plot_name: the name of the plot
+    :param normalised: is data normalized to [0, 1] or not. Default is True
+    :return: None
+    """
+
     return   # -----------------------------------------------------TODO: REMOVE!----------------------------------------------------------------------------------------------------
     matplotlib.pyplot.plot(x, y)
     matplotlib.pyplot.title(plot_name)
@@ -113,6 +150,16 @@ def plot(x: list[float], y: np.ndarray, plot_name: str, normalised=True):
 
 def analyze(all_data: list[list[list[float]]], lambda_data: list[float], data_namings: list[str], white_idx: int,
             black_idx: int) -> list[list[float]]:
+    """
+    Main function for analyzing, filtering, interpolating, plotting data
+    :param all_data: several samples data 3-d array (different samples -> several measurements -> measurement)
+    :param lambda_data: lambda values for which measurements are taken
+    :param data_namings: names for the samples
+    :param white_idx: white data index in all_data list
+    :param black_idx: black data index in all_data list
+    :return: data after calculations
+    """
+
     white_data_average = average(all_data[white_idx])
     black_data_average = average(all_data[black_idx])
 
@@ -146,6 +193,23 @@ def analyze(all_data: list[list[list[float]]], lambda_data: list[float], data_na
 
 
 class InterpolatedColorCoefficients:
+    """
+    Class for calculation color coefficients used for getting values from spectrometer data
+
+    Attributes
+    ----------
+    filename: str
+        a name of the file from which retrieve data
+    color_coefficients: dict
+        data from file with color coefficients
+    x_func: Callable[[float], float]
+        interpolation function for x part
+    y_func: Callable[[float], float]
+        interpolation function for y part
+    z_func: Callable[[float], float]
+        interpolation function for z part
+    """
+
     filename: str
     color_coefficients: dict  # lambda -> (x, y, z)
     x_func: Callable[[float], float]
