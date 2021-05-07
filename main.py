@@ -423,7 +423,7 @@ if __name__ == "__main__":
     # Getting files *.lab in current working directory
 
     os.chdir("Data_from_12.04.2021")
-    os.chdir("Try_#3")
+    os.chdir("Try #3")
 
     only_files = [f for f in listdir(getcwd()) if isfile(join(getcwd(), f))]
     files = list(filter(lambda x: re.match(r'.*\.lab$', x), only_files))
