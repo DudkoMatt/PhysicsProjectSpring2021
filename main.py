@@ -10,6 +10,7 @@ from os.path import isfile, join
 from typing import Callable
 import sys
 import platform
+from PIL import Image
 
 
 # Getting vectors from file
@@ -359,11 +360,98 @@ class TransitionCoefficient:
         self.z = (1 - x - y) / y
 
 
-def get_white_coefficient():
-    x_w = 109.850  # ToDo коэффициенты взяты со стр 110 для источника A
-    y_w = 100
-    z_w = 35.585
+def get_A_white_coefficient():
+    x_w = 109.850 / 100  # коэффициенты взяты со стр 110 для источника A
+    y_w = 100 / 100
+    z_w = 35.585 / 100
     return np.array([[x_w], [y_w], [z_w]])
+
+
+def get_E_white_coefficient():
+    x_w = 100 / 100  # коэффициенты взяты со стр 110 для источника E
+    y_w = 100 / 100
+    z_w = 100 / 100
+    return np.array([[x_w], [y_w], [z_w]])
+
+
+def get_D65_white_coefficient():
+    x_w = 95.047 / 100  # коэффициенты взяты со стр 110 для источника D65
+    y_w = 100 / 100
+    z_w = 108.883 / 100
+    return np.array([[x_w], [y_w], [z_w]])
+
+
+def get_M_A_matrix(xyz_scaling=False, bradford=False, von_kries=False):
+    """
+        # XYZ Scaling
+        # -----------
+        M_A = np.array([[1.0000000 0.0000000 0.0000000],
+        [0.0000000 1.0000000 0.0000000],
+        [0.0000000 0.0000000 1.0000000]])
+
+        M_A_inv = np.array([[1.0000000 0.0000000 0.0000000],
+        [0.0000000 1.0000000 0.0000000],
+        [0.0000000 0.0000000 1.0000000]])
+
+
+        # Bradford
+        # --------
+        M_A = np.array([[0.8951000 0.2664000 -0.1614000],
+        [-0.7502000 1.7135000 0.0367000],
+        [0.0389000 -0.0685000 1.0296000]])
+
+        M_A_inv = np.array([[0.9869929 -0.1470543 0.1599627],
+        [0.4323053 0.5183603 0.0492912],
+        [-0.0085287 0.0400428 0.9684867]])
+
+
+        # Von Kries
+        # ---------
+        M_A = np.array([[0.4002400 0.7076000 -0.0808100],
+        [-0.2263000 1.1653200 0.0457000],
+        [0.0000000 0.0000000 0.9182200]])
+
+        M_A_inv = np.array([[1.8599364 -1.1293816 0.2198974],
+        [0.3611914 0.6388125 -0.0000064],
+        [0.0000000 0.0000000 1.0890636]])
+    """
+    if xyz_scaling:
+        return np.array([[1.0000000, 0.0000000, 0.0000000],
+                    [0.0000000, 1.0000000, 0.0000000],
+                    [0.0000000, 0.0000000, 1.0000000]])
+    elif bradford:
+        return np.array([[0.8951000, 0.2664000, -0.1614000],
+                        [-0.7502000, 1.7135000, 0.0367000],
+                        [0.0389000, -0.0685000, 1.0296000]])
+    elif von_kries:
+        return np.array([[0.4002400, 0.7076000, -0.0808100],
+                        [-0.2263000, 1.1653200, 0.0457000],
+                        [0.0000000, 0.0000000, 0.9182200]])
+    else:
+        print("Wow, you should pass an argument!", file=sys.stderr)
+        exit(-1)
+
+
+def convert_white_point(x: float, y: float, z: float, from_white: np.array, to_white: np.array) -> (float, float, float):
+    M_A = get_M_A_matrix(von_kries=True)
+    M_A_inv = LA.inv(M_A)
+
+    from_correction_coefs = M_A.dot(from_white)
+    to_correction_coefs = M_A.dot(to_white)
+
+    first = to_correction_coefs[0, 0] / from_correction_coefs[0, 0]
+    second = to_correction_coefs[1, 0] / from_correction_coefs[1, 0]
+    third = to_correction_coefs[2, 0] / from_correction_coefs[2, 0]
+
+    M_C = M_A_inv.dot(np.diag([first, second, third])).dot(M_A)
+
+    # M_C = np.array([
+    #     [0.9103323,  0.0000000,  0.0000000],
+    #     [0.0000000,  1.0000000,  0.0000000],
+    #     [0.0000000,  0.0000000,  2.8101728],
+    # ])
+
+    return M_C.dot(np.array([[x], [y], [z]]))
 
 
 def get_inverse_m_matrix():
@@ -374,28 +462,53 @@ def get_inverse_m_matrix():
     x_b = 0.1670  # ToDo
     y_b = 0.0090  # ToDo
 
+    # ToDO: перевод из A -> E
+
     # x_r = 0.6400  # ToDo коэффициенты из приложения 4 книжки на стр 111 тип Adobe RGB
     # y_r = 0.3300  # ToDo
     # x_g = 0.2100  # ToDo
     # y_g = 0.7100  # ToDo
     # x_b = 0.1500  # ToDo
     # y_b = 0.0600  # ToDo
+
     r_avg = TransitionCoefficient(x_r, y_r)
     g_avg = TransitionCoefficient(x_g, y_g)
     b_avg = TransitionCoefficient(x_b, y_b)
     s = (LA.inv(np.array([[r_avg.x, g_avg.x, b_avg.x], [r_avg.y, g_avg.y, b_avg.y], [r_avg.z, g_avg.z, b_avg.z]]))).dot(
-        get_white_coefficient())
+        get_E_white_coefficient())
     s_r = s[0, 0]
     s_g = s[1, 0]
     s_b = s[2, 0]
+
+    # ----------from site--------------
+    # 2.3706743 -0.9000405 -0.4706338
+    # -0.5138850 1.4253036 0.0885814
+    # 0.0052982 -0.0146949 1.0093968
+
+    # M_inv = np.array(
+    #     [[2.3706743, -0.9000405, -0.4706338],
+    #      [-0.5138850, 1.4253036, 0.0885814],
+    #      [0.0052982, -0.0146949, 1.0093968]]
+    # )
+    #
+    # return M_inv
+
+
     return LA.inv(np.array(
-        [[s_r * r_avg.x, s_g * g_avg.x, s_b * b_avg.x], [s_r * r_avg.y, s_g * g_avg.y, s_b * b_avg.y],
+        [[s_r * r_avg.x, s_g * g_avg.x, s_b * b_avg.x],
+         [s_r * r_avg.y, s_g * g_avg.y, s_b * b_avg.y],
          [s_r * r_avg.z, s_g * g_avg.z, s_b * b_avg.z]]))
 
 
 # ToDO: теперь принимаем новые коэффициенты от 0 до 1
 def xyz_to_linear_rgb(x: float, y: float, z: float) -> (float, float, float):
-    result_vector = get_inverse_m_matrix().dot(np.array([[x], [y], [z]]))
+    converted_coefs = convert_white_point(x, y, z, get_A_white_coefficient(), get_E_white_coefficient())
+
+    # ToDO
+    xyz_converted_file = open('xyz_converted.txt', 'a')  # ToDO
+    print("{:.5f} {:.5f} {:.5f}".format(converted_coefs[0, 0], converted_coefs[1, 0], converted_coefs[2, 0]), file=xyz_converted_file)  # ToDO
+
+    result_vector = get_inverse_m_matrix().dot(converted_coefs)
     return result_vector[0, 0], result_vector[1, 0], result_vector[2, 0]
 
 
@@ -457,7 +570,7 @@ if __name__ == "__main__":
     # interpolated_y = np.interp(lambda_data, coefficients_list[0], coefficients_list[2])
     # interpolated_z = np.interp(lambda_data, coefficients_list[0], coefficients_list[3])
     #
-    # # ToDO: построить графики -> коэффициенты до интеполяции и после интерполяции (3 * 2 графика для каждой из координат)
+    # ToDO: построить графики -> коэффициенты до интеполяции и после интерполяции (3 * 2 графика для каждой из координат)
     #
     # exit(0)  # ToDO: убрать
     # -----------------------------------------------------------------------------------------------------------------
@@ -467,6 +580,7 @@ if __name__ == "__main__":
 
     if platform.system() == "Windows":
         xyz_file = open('xyz.txt', 'w')
+        open('xyz_converted.txt', 'w').close()
     else:
         xyz_file = open('/Users/igorklyuzev/ITMO/4_семестр/Физика/PhysicsProjectSpring2021/xyz.txt', 'w')
 
@@ -474,10 +588,21 @@ if __name__ == "__main__":
 
     for vector in processed_data:
         xyz_coord = calculate_color_xyz(vector, lambda_data, color_coefficients)
-        print(xyz_coord, filenames[k], file=xyz_file)
+        print("{:.5f} {:.5f} {:.5f}".format(*xyz_coord), filenames[k], file=xyz_file)
         k += 1
+        
+        # ToDO: перевод из одной точки белого в другую
+        
         calculated_colors.append(xyz_to_linear_rgb(*xyz_coord))
     if platform.system() == "Windows":
-        print(*calculated_colors, sep='\n', file=open('output.txt', 'w'))  # ToDO: wrong answers -> negative rgb coordinates
+        output_file = open('output.txt', 'w')
+        for calculated_color in calculated_colors:
+            print("{:.5f} {:.5f} {:.5f}".format(*calculated_color), file=output_file)  # ToDO: wrong answers -> negative rgb coordinates
     else:
         print(*calculated_colors, sep='\n', file=open('/Users/igorklyuzev/ITMO/4_семестр/Физика/PhysicsProjectSpring2021/output.txt', 'w'))  # ToDO: wrong answers -> negative rgb coordinates
+
+    k = 0
+    for color in calculated_colors:
+        img = Image.new('RGB', (1000, 1000), (max(min(round(color[0] * 255), 255), 0), max(min(round(color[1] * 255), 255), 0), max(min(round(color[2] * 255), 255), 0)))
+        img.save("./images/{}.png".format(filenames[k]))
+        k += 1
