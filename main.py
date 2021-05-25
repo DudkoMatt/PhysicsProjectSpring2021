@@ -255,35 +255,7 @@ class InterpolatedColorCoefficients:
             interp.interp1d(lambda_array, z_array)
 
     def get_coefficients_for(self, wavelength: float) -> (float, float, float):
-        # TODO: SWITCH ------------------------------------------------------------------------------------------------------------------------------------------
         return Coefficient(self.x_func(wavelength), self.y_func(wavelength), self.z_func(wavelength))
-        # return Coefficient(*InterpolatedColorCoefficients.get_color_coefficients_for(wavelength))
-
-    @staticmethod
-    def gaussian(x, alpha, mu, sigma_1, sigma_2):
-        return alpha * np.exp(-((x - mu) / (sigma_1 if x < mu else sigma_2)) ** 2 / 2)
-
-    @staticmethod
-    def x_coefficient_CIE_1931(wavelength):
-        return InterpolatedColorCoefficients.gaussian(wavelength, 1.056, 599.8, 379, 310) \
-               + InterpolatedColorCoefficients.gaussian(wavelength, 0.362, 442.0, 160, 267) \
-               + InterpolatedColorCoefficients.gaussian(wavelength, -0.065, 501.1, 204, 262)
-
-    @staticmethod
-    def y_coefficient_CIE_1931(wavelength):
-        return InterpolatedColorCoefficients.gaussian(wavelength, 0.821, 568.8, 469, 405) \
-               + InterpolatedColorCoefficients.gaussian(wavelength, 0.286, 530.9, 163, 311)
-
-    @staticmethod
-    def z_coefficient_CIE_1931(wavelength):
-        return InterpolatedColorCoefficients.gaussian(wavelength, 1.217, 437.0, 118, 360) \
-               + InterpolatedColorCoefficients.gaussian(wavelength, 0.681, 459.0, 260, 138)
-
-    @staticmethod
-    def get_color_coefficients_for(wavelength):
-        return InterpolatedColorCoefficients.x_coefficient_CIE_1931(wavelength), \
-               InterpolatedColorCoefficients.y_coefficient_CIE_1931(wavelength), \
-               InterpolatedColorCoefficients.z_coefficient_CIE_1931(wavelength)
 
 
 class Coefficient:
@@ -336,7 +308,6 @@ def sum_of_one_vector_data(data: list[float], lambda_data: list[float],
     return result
 
 
-# ToDO: new --> returning data in range [0, 1]
 def calculate_color_xyz(data_vector: list[float], lambda_data: list[float],
                         color_coefficients: InterpolatedColorCoefficients) -> (float, float, float):
     coefficient = sum_of_one_vector_data(data_vector, lambda_data, color_coefficients)
@@ -346,7 +317,7 @@ def calculate_color_xyz(data_vector: list[float], lambda_data: list[float],
     y = 100
     z = k_c * coefficient.z
 
-    return (X := x / (x + y + z)), (Y := y / (x + y + z)), 1 - X - Y  # z / (x + y + z)
+    return (X := x / (x + y + z)), (Y := y / (x + y + z)), 1 - X - Y
 
 
 class TransitionCoefficient:
@@ -445,31 +416,16 @@ def convert_white_point(x: float, y: float, z: float, from_white: np.array, to_w
 
     M_C = M_A_inv.dot(np.diag([first, second, third])).dot(M_A)
 
-    # M_C = np.array([
-    #     [0.9103323,  0.0000000,  0.0000000],
-    #     [0.0000000,  1.0000000,  0.0000000],
-    #     [0.0000000,  0.0000000,  2.8101728],
-    # ])
-
     return M_C.dot(np.array([[x], [y], [z]]))
 
 
 def get_inverse_m_matrix():
-    x_r = 0.7350  # ToDo коэффициенты из приложения 4 книжки на стр 111 тип CIE RGB
-    y_r = 0.2650  # ToDo
-    x_g = 0.2740  # ToDo
-    y_g = 0.7170  # ToDo
-    x_b = 0.1670  # ToDo
-    y_b = 0.0090  # ToDo
-
-    # ToDO: перевод из A -> E
-
-    # x_r = 0.6400  # ToDo коэффициенты из приложения 4 книжки на стр 111 тип Adobe RGB
-    # y_r = 0.3300  # ToDo
-    # x_g = 0.2100  # ToDo
-    # y_g = 0.7100  # ToDo
-    # x_b = 0.1500  # ToDo
-    # y_b = 0.0600  # ToDo
+    x_r = 0.7350  # Коэффициенты из приложения 4 книжки на стр 111 тип CIE RGB
+    y_r = 0.2650
+    x_g = 0.2740
+    y_g = 0.7170
+    x_b = 0.1670
+    y_b = 0.0090
 
     r_avg = TransitionCoefficient(x_r, y_r)
     g_avg = TransitionCoefficient(x_g, y_g)
@@ -480,42 +436,15 @@ def get_inverse_m_matrix():
     s_g = s[1, 0]
     s_b = s[2, 0]
 
-    # ----------from site--------------
-    # 2.3706743 -0.9000405 -0.4706338
-    # -0.5138850 1.4253036 0.0885814
-    # 0.0052982 -0.0146949 1.0093968
-
-    # M_inv = np.array(
-    #     [[2.3706743, -0.9000405, -0.4706338],
-    #      [-0.5138850, 1.4253036, 0.0885814],
-    #      [0.0052982, -0.0146949, 1.0093968]]
-    # )
-    #
-    # return M_inv
-
-
     return LA.inv(np.array(
         [[s_r * r_avg.x, s_g * g_avg.x, s_b * b_avg.x],
          [s_r * r_avg.y, s_g * g_avg.y, s_b * b_avg.y],
          [s_r * r_avg.z, s_g * g_avg.z, s_b * b_avg.z]]))
 
 
-# ToDO: теперь принимаем новые коэффициенты от 0 до 1
 def xyz_to_linear_rgb(x: float, y: float, z: float) -> (float, float, float):
-    converted_coefs = convert_white_point(x, y, z, get_A_white_coefficient(), get_E_white_coefficient())
-
-    # ToDO
-    xyz_converted_file = open('xyz_converted.txt', 'a')  # ToDO
-    print("{:.5f} {:.5f} {:.5f}".format(converted_coefs[0, 0], converted_coefs[1, 0], converted_coefs[2, 0]), file=xyz_converted_file)  # ToDO
-
-    result_vector = get_inverse_m_matrix().dot(converted_coefs)
-    return result_vector[0, 0], result_vector[1, 0], result_vector[2, 0]
-
-
-def linear_rgb_to_non_linear_rgb(x: float, y: float, z: float) -> (float, float, float):
-    x_linear, y_linear, z_linear = xyz_to_linear_rgb(x, y, z)
-    gamma = 2.2  # ToDo
-    return x_linear ** (1 / gamma), y_linear ** (1 / gamma), z_linear ** (1 / gamma)
+    result_vector = get_inverse_m_matrix().dot(np.array([x, y, z]))
+    return result_vector[0], result_vector[1], result_vector[2]
 
 
 if __name__ == "__main__":
@@ -523,9 +452,6 @@ if __name__ == "__main__":
 
     # Const from .lab file
     DELTA_LAMBDA = 0.086
-    # ToDO: больше нет необхоимости
-    # LAMBDA_START = 400.022
-    # LAMBDA_STOP = 699.978
 
     # Black and white indexes
     WHITE_IDX = 0
@@ -555,26 +481,6 @@ if __name__ == "__main__":
     # Cut lambda array due to using median
     lambda_data = lambda_data[2: len(lambda_data) - 2]
 
-    # ------------------------------ Тестирование интерполяции --------------------------------------------------------
-    # # ToDO
-    #
-    # coefficients_list = [[], [], [], []]
-    #
-    # for key in color_coefficients.keys():
-    #     coefficients_list[0].append(key)
-    #     coefficients_list[1].append(color_coefficients[key][0])
-    #     coefficients_list[2].append(color_coefficients[key][1])
-    #     coefficients_list[3].append(color_coefficients[key][2])
-    #
-    # interpolated_x = np.interp(lambda_data, coefficients_list[0], coefficients_list[1])
-    # interpolated_y = np.interp(lambda_data, coefficients_list[0], coefficients_list[2])
-    # interpolated_z = np.interp(lambda_data, coefficients_list[0], coefficients_list[3])
-    #
-    # ToDO: построить графики -> коэффициенты до интеполяции и после интерполяции (3 * 2 графика для каждой из координат)
-    #
-    # exit(0)  # ToDO: убрать
-    # -----------------------------------------------------------------------------------------------------------------
-
     processed_data = analyze(all_data, lambda_data, filenames, WHITE_IDX, BLACK_IDX)
     calculated_colors = []
 
@@ -591,13 +497,14 @@ if __name__ == "__main__":
         print("{:.5f} {:.5f} {:.5f}".format(*xyz_coord), filenames[k], file=xyz_file)
         k += 1
         
-        # ToDO: перевод из одной точки белого в другую
-        
         calculated_colors.append(xyz_to_linear_rgb(*xyz_coord))
     if platform.system() == "Windows":
         output_file = open('output.txt', 'w')
         for calculated_color in calculated_colors:
-            print("{:.5f} {:.5f} {:.5f}".format(*calculated_color), file=output_file)  # ToDO: wrong answers -> negative rgb coordinates
+            print("{} {} {}".format(*list(map(lambda _x: max(min(round(_x * 255), 255), 0), calculated_color))), file=output_file)  # ToDO: wrong answers -> negative rgb coordinates
+
+        output_file.flush()
+        output_file.close()
     else:
         print(*calculated_colors, sep='\n', file=open('/Users/igorklyuzev/ITMO/4_семестр/Физика/PhysicsProjectSpring2021/output.txt', 'w'))  # ToDO: wrong answers -> negative rgb coordinates
 
@@ -606,3 +513,6 @@ if __name__ == "__main__":
         img = Image.new('RGB', (1000, 1000), (max(min(round(color[0] * 255), 255), 0), max(min(round(color[1] * 255), 255), 0), max(min(round(color[2] * 255), 255), 0)))
         img.save("./images/{}.png".format(filenames[k]))
         k += 1
+
+    xyz_file.flush()
+    xyz_file.close()
