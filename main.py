@@ -11,6 +11,7 @@ from typing import Callable
 import sys
 import platform
 from PIL import Image
+import math
 
 
 # Getting vectors from file
@@ -445,6 +446,15 @@ def get_inverse_m_matrix():
 def xyz_to_linear_rgb(x: float, y: float, z: float) -> (float, float, float):
     result_vector = get_inverse_m_matrix().dot(np.array([x, y, z]))
     return result_vector[0], result_vector[1], result_vector[2]
+
+
+def color_diff(rgb1: np.array, rgb2: np.array) -> float:
+    assert rgb1.shape == (3,), "Data should be in one row, not matrix 3x1"
+    assert rgb2.shape == (3,), "Data should be in one row, not matrix 3x1"
+    assert all([isinstance(_i, np.int32) and 0 <= _i <= 255 for _i in rgb1]), "Data should be in range 0..255, not 0..1 or negative"
+    assert all([isinstance(_i, np.int32) and 0 <= _i <= 255 for _i in rgb2]), "Data should be in range 0..255, not 0..1 or negative"
+
+    return math.sqrt(sum([(rgb1[_i] - rgb2[_i]) ** 2 for _i in range(len(rgb1))]))
 
 
 if __name__ == "__main__":
