@@ -301,7 +301,7 @@ class Coefficient:
 
 
 def sum_of_one_vector_data(data: list[float], lambda_data: list[float],
-                           color_coefficients: InterpolatedColorCoefficients) -> Coefficient:
+                           color_coefficients: InterpolatedColorCoefficients, DELTA_LAMBDA: float) -> Coefficient:
     result = Coefficient(0, 0, 0)
     length = len(lambda_data)
     for i in range(0, length):
@@ -310,8 +310,8 @@ def sum_of_one_vector_data(data: list[float], lambda_data: list[float],
 
 
 def calculate_color_xyz(data_vector: list[float], lambda_data: list[float],
-                        color_coefficients: InterpolatedColorCoefficients) -> (float, float, float):
-    coefficient = sum_of_one_vector_data(data_vector, lambda_data, color_coefficients)
+                        color_coefficients: InterpolatedColorCoefficients, DELTA_LAMBDA: float) -> (float, float, float):
+    coefficient = sum_of_one_vector_data(data_vector, lambda_data, color_coefficients, DELTA_LAMBDA)
     k_c = 100 / coefficient.y
 
     x = k_c * coefficient.x
@@ -503,7 +503,7 @@ if __name__ == "__main__":
     k = 0
 
     for vector in processed_data:
-        xyz_coord = calculate_color_xyz(vector, lambda_data, color_coefficients)
+        xyz_coord = calculate_color_xyz(vector, lambda_data, color_coefficients, DELTA_LAMBDA)
         print("{:.5f} {:.5f} {:.5f}".format(*xyz_coord), filenames[k], file=xyz_file)
         k += 1
         
