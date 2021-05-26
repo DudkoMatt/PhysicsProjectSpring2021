@@ -266,3 +266,5 @@ pip-selfcheck.json
 Data_from_05.04.2021/01.lab
 *.lab
 .DS_Store
+
+Data_*
