@@ -448,13 +448,18 @@ def xyz_to_linear_rgb(x: float, y: float, z: float) -> (float, float, float):
     return result_vector[0], result_vector[1], result_vector[2]
 
 
-def color_diff(rgb1: np.array, rgb2: np.array) -> float:
+def rgb_color_diff(rgb1: np.array, rgb2: np.array) -> float:
     assert rgb1.shape == (3,), "Data should be in one row, not matrix 3x1"
     assert rgb2.shape == (3,), "Data should be in one row, not matrix 3x1"
     assert all([isinstance(_i, np.int32) and 0 <= _i <= 255 for _i in rgb1]), "Data should be in range 0..255, not 0..1 or negative"
     assert all([isinstance(_i, np.int32) and 0 <= _i <= 255 for _i in rgb2]), "Data should be in range 0..255, not 0..1 or negative"
 
     return math.sqrt(sum([(rgb1[_i] - rgb2[_i]) ** 2 for _i in range(len(rgb1))]))
+
+
+def spectrum_to_rgb(spectrum: list[float]):
+    _xyz_coord = calculate_color_xyz(spectrum, lambda_data, color_coefficients, DELTA_LAMBDA)
+    return "{} {} {}".format(*list(map(lambda _x: max(min(round(_x * 255), 255), 0), *xyz_to_linear_rgb(*_xyz_coord))))
 
 
 if __name__ == "__main__":
@@ -511,7 +516,7 @@ if __name__ == "__main__":
     if platform.system() == "Windows":
         output_file = open('output.txt', 'w')
         for calculated_color in calculated_colors:
-            print("{} {} {}".format(*list(map(lambda _x: max(min(round(_x * 255), 255), 0), calculated_color))), file=output_file)  # ToDO: wrong answers -> negative rgb coordinates
+            print("{} {} {}".format(*list(map(lambda _x: max(min(round(_x * 255), 255), 0), calculated_color))), file=output_file)
 
         output_file.flush()
         output_file.close()
