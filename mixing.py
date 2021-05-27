@@ -1,4 +1,4 @@
-from main import *
+import math
 import scipy.optimize
 import numpy as np
 
