@@ -76,4 +76,4 @@ def analyze_color(base_colors_spectrum: list[list[float]], color_to_analyze: lis
 
     result = scipy.optimize.minimize(function_to_optimize, colors_parts_coefficients, bounds=scipy.optimize.Bounds([0] * len(base_colors_spectrum), [np.inf] * len(base_colors_spectrum)))
     minimum = min(filter(lambda _x: _x > 0, result.x))
-    return list(map(lambda element: 0 if element <= 0 else round(element / minimum, 5), result.x))
+    return list(map(lambda element: round(element / minimum, 5), result.x))
