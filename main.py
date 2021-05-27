@@ -569,8 +569,20 @@ if __name__ == "__main__":
     print('Maximum difference RGB: {:.5f}'.format(max(np.fabs(rgb - true_rgb))))
     print('Total difference RGB: {:.5f}'.format(TOTAL_DIFF_RGB := sum(np.fabs(rgb - true_rgb))))
 
+
+    class bcolors:  # Colors for text in console
+        HEADER = '\033[95m'
+        OKBLUE = '\033[94m'
+        OKCYAN = '\033[96m'
+        OKGREEN = '\033[92m'
+        WARNING = '\033[93m'
+        FAIL = '\033[91m'
+        ENDC = '\033[0m'
+        BOLD = '\033[1m'
+        UNDERLINE = '\033[4m'
+
     if TOTAL_DIFF_RGB * 255 > ACCURACY_LIMIT:
-        print("ACHTUNG, NOTE_BENE, AAAAAAAAAAAAAAAAAAAAAAAAAAAA: You cannot get this color out of the base colors")
+        print(bcolors.FAIL + "ACHTUNG, NOTE_BENE, AAAAAAAAAAAAAAAAAAAAAAAAAAAA: You cannot get this color out of the base colors" + bcolors.ENDC)
 
     img = Image.new('RGB', (1000, 1000), (max(min(round(rgb[0] * 255), 255), 0), max(min(round(rgb[1] * 255), 255), 0),
                                           max(min(round(rgb[2] * 255), 255), 0)))
