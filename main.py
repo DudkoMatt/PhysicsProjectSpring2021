@@ -15,7 +15,19 @@ import math
 from mixing import analyze_color, mix_it
 
 
-ACCURACY_LIMIT = 10
+ACCURACY_LIMIT = 25
+
+
+class bcolors:  # Colors for text in console
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 
 # Getting vectors from file
@@ -543,50 +555,51 @@ if __name__ == "__main__":
     base = [processed_data[4], *processed_data[7:17]]  # Set base colors spectrum to mix
     color_to_analyze = processed_data[29]              # Set color spectrum to analyze
 
-    result_spectrum_base_proportions = analyze_color(base, color_to_analyze)
-    result_spectrum = mix_it(base, result_spectrum_base_proportions)
+    for index, color_to_analyze in [
+        (21, processed_data[24]),
+        (22, processed_data[25]),
+        (24, processed_data[27]),
+        (26, processed_data[29]),
+        (27, processed_data[30]),
+        (28, processed_data[31]),
+        (29, processed_data[32]),
+        (30, processed_data[33]),
+        (31, processed_data[34])
+    ]:
+        print("--------------------------------------------Color number {}----------------------------------------------------------------------".format(index))
+        result_spectrum_base_proportions = analyze_color(base, color_to_analyze)
+        result_spectrum = mix_it(base, result_spectrum_base_proportions)
 
-    xyz_coord = calculate_color_xyz(result_spectrum, lambda_data, color_coefficients, DELTA_LAMBDA)
-    rgb = xyz_to_linear_rgb(*xyz_coord)
+        xyz_coord = calculate_color_xyz(result_spectrum, lambda_data, color_coefficients, DELTA_LAMBDA)
+        rgb = xyz_to_linear_rgb(*xyz_coord)
 
-    print('Calculated proportions:', result_spectrum_base_proportions)
-    print('Calculated XYZ: ({:.5f}, {:.5f}, {:.5f})'.format(*xyz_coord))
-    print('Calculated RGB: ({:.5f}, {:.5f}, {:.5f}) --> ({}, {}, {})'.format(*rgb, *list(map(lambda _x: max(min(round(_x * 255), 255), 0), rgb))))
-    print('========================================')
-    print('True color coordinates:')
-    true_xyz = calculate_color_xyz(color_to_analyze, lambda_data, color_coefficients, DELTA_LAMBDA)
-    true_rgb = xyz_to_linear_rgb(*true_xyz)
-    print('XYZ: ({:.5f}, {:.5f}, {:.5f})'.format(*true_xyz))
-    print('RGB: ({:.5f}, {:.5f}, {:.5f}) --> ({}, {}, {})'.format(*true_rgb, *list(map(lambda _x: max(min(round(_x * 255), 255), 0), true_rgb))))
-    print('========================================')
-    xyz_coord = np.array(xyz_coord)
-    rgb = np.array(rgb)
-    true_xyz = np.array(true_xyz)
-    true_rgb = np.array(true_rgb)
-    print('Maximum difference XYZ: {:.5f}'.format(max(np.fabs(xyz_coord - true_xyz))))
-    print('Total difference XYZ: {:.5f}'.format(sum(np.fabs(xyz_coord - true_xyz))))
-    print()
-    print('Maximum difference RGB: {:.5f}'.format(max(np.fabs(rgb - true_rgb))))
-    print('Total difference RGB: {:.5f}'.format(TOTAL_DIFF_RGB := sum(np.fabs(rgb - true_rgb))))
+        print('Calculated proportions:', result_spectrum_base_proportions)
+        print('Calculated XYZ: ({:.5f}, {:.5f}, {:.5f})'.format(*xyz_coord))
+        print('Calculated RGB: ({:.5f}, {:.5f}, {:.5f}) --> ({}, {}, {})'.format(*rgb, *list(map(lambda _x: max(min(round(_x * 255), 255), 0), rgb))))
+        print('========================================')
+        print('True color coordinates:')
+        true_xyz = calculate_color_xyz(color_to_analyze, lambda_data, color_coefficients, DELTA_LAMBDA)
+        true_rgb = xyz_to_linear_rgb(*true_xyz)
+        print('XYZ: ({:.5f}, {:.5f}, {:.5f})'.format(*true_xyz))
+        print('RGB: ({:.5f}, {:.5f}, {:.5f}) --> ({}, {}, {})'.format(*true_rgb, *list(map(lambda _x: max(min(round(_x * 255), 255), 0), true_rgb))))
+        print('========================================')
+        xyz_coord = np.array(xyz_coord)
+        rgb = np.array(rgb)
+        true_xyz = np.array(true_xyz)
+        true_rgb = np.array(true_rgb)
+        print('Maximum difference XYZ: {:.5f}'.format(max(np.fabs(xyz_coord - true_xyz))))
+        print('Total difference XYZ: {:.5f}'.format(sum(np.fabs(xyz_coord - true_xyz))))
+        print()
+        print('Maximum difference RGB: {:.5f}'.format(MAX_DIFF_RGB := max(np.fabs(rgb - true_rgb))))
+        print('Total difference RGB: {:.5f}'.format(sum(np.fabs(rgb - true_rgb))))
 
+        if MAX_DIFF_RGB * 255 > ACCURACY_LIMIT:
+            print(bcolors.FAIL + "ACHTUNG, NOTE_BENE, AAAAAAAAAAAAAAAAAAAAAAAAAAAA: You cannot get this color out of the base colors" + bcolors.ENDC)
 
-    class bcolors:  # Colors for text in console
-        HEADER = '\033[95m'
-        OKBLUE = '\033[94m'
-        OKCYAN = '\033[96m'
-        OKGREEN = '\033[92m'
-        WARNING = '\033[93m'
-        FAIL = '\033[91m'
-        ENDC = '\033[0m'
-        BOLD = '\033[1m'
-        UNDERLINE = '\033[4m'
+        img = Image.new('RGB', (1000, 1000), (max(min(round(rgb[0] * 255), 255), 0), max(min(round(rgb[1] * 255), 255), 0),
+                                              max(min(round(rgb[2] * 255), 255), 0)))
+        current_image_name = "./images/Analyzed{}.png".format(index)
+        img.save(current_image_name)
 
-    if TOTAL_DIFF_RGB * 255 > ACCURACY_LIMIT:
-        print(bcolors.FAIL + "ACHTUNG, NOTE_BENE, AAAAAAAAAAAAAAAAAAAAAAAAAAAA: You cannot get this color out of the base colors" + bcolors.ENDC)
-
-    img = Image.new('RGB', (1000, 1000), (max(min(round(rgb[0] * 255), 255), 0), max(min(round(rgb[1] * 255), 255), 0),
-                                          max(min(round(rgb[2] * 255), 255), 0)))
-    img.save("./images/{}.png".format("Analyzed"))
-
-    print()
-    print("Result image of calculated mixture was written to {}".format("./images/{}.png".format("Analyzed")))
+        print()
+        print("Result image of calculated mixture was written to {}".format(current_image_name))
