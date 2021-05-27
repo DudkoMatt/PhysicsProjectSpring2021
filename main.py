@@ -548,10 +548,27 @@ if __name__ == "__main__":
 
     print('Calculated proportions:', result_spectrum_base_proportions)
     print('Calculated XYZ: ({:.5f}, {:.5f}, {:.5f})'.format(*xyz_coord))
-    print('Calculated RGB: ({:.5f}, {:.5f}, {:.5f})'.format(*rgb))
+    print('Calculated RGB: ({:.5f}, {:.5f}, {:.5f}) --> ({}, {}, {})'.format(*rgb, *list(map(lambda _x: max(min(round(_x * 255), 255), 0), rgb))))
+    print('========================================')
+    print('True color coordinates:')
+    true_xyz = calculate_color_xyz(color_to_analyze, lambda_data, color_coefficients, DELTA_LAMBDA)
+    true_rgb = calculated_colors[29]
+    print('XYZ: ({:.5f}, {:.5f}, {:.5f})'.format(*true_xyz))
+    print('RGB: ({:.5f}, {:.5f}, {:.5f}) --> ({}, {}, {})'.format(*true_rgb, *list(map(lambda _x: max(min(round(_x * 255), 255), 0), true_rgb))))
+    print('========================================')
+    xyz_coord = np.array(xyz_coord)
+    rgb = np.array(rgb)
+    true_xyz = np.array(true_xyz)
+    true_rgb = np.array(true_rgb)
+    print('Maximum difference XYZ: {:.5f}'.format(max(np.fabs(xyz_coord - true_xyz))))
+    print('Total difference XYZ: {:.5f}'.format(sum(np.fabs(xyz_coord - true_xyz))))
+    print()
+    print('Maximum difference RGB: {:.5f}'.format(max(np.fabs(rgb - true_rgb))))
+    print('Total difference RGB: {:.5f}'.format(sum(np.fabs(rgb - true_rgb))))
 
     img = Image.new('RGB', (1000, 1000), (max(min(round(rgb[0] * 255), 255), 0), max(min(round(rgb[1] * 255), 255), 0),
                                           max(min(round(rgb[2] * 255), 255), 0)))
     img.save("./images/{}.png".format("Analyzed"))
 
+    print()
     print("Result image of calculated mixture was written to {}".format("./images/{}.png".format("Analyzed")))
