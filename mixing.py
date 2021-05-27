@@ -1,5 +1,6 @@
 from main import *
 import scipy.optimize
+import numpy as np
 
 
 def mix_it_2(first_color: list[float], second_color: list[float], first_color_part, second_color_part) -> list[float]:
@@ -73,6 +74,6 @@ def analyze_color(base_colors_spectrum: list[list[float]], color_to_analyze: lis
         current_calculated_color = mix_it(base_colors_spectrum, k_coefficients)
         return spectrum_diff(current_calculated_color, color_to_analyze) * len(list(filter(lambda _x: _x > 0, k_coefficients)))
 
-    result = scipy.optimize.minimize(function_to_optimize, colors_parts_coefficients)
+    result = scipy.optimize.minimize(function_to_optimize, colors_parts_coefficients, bounds=scipy.optimize.Bounds([0] * len(base_colors_spectrum), [np.inf] * len(base_colors_spectrum)))
     minimum = min(filter(lambda _x: _x > 0, result.x))
     return list(map(lambda element: 0 if element <= 0 else round(element / minimum, 5), result.x))
