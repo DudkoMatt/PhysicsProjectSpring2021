@@ -457,9 +457,10 @@ def rgb_color_diff(rgb1: np.array, rgb2: np.array) -> float:
     return math.sqrt(sum([(rgb1[_i] - rgb2[_i]) ** 2 for _i in range(len(rgb1))]))
 
 
+# CAUTION: USING GLOBAL VARIABLES
 def spectrum_to_rgb(spectrum: list[float]):
     _xyz_coord = calculate_color_xyz(spectrum, lambda_data, color_coefficients, DELTA_LAMBDA)
-    return "{} {} {}".format(*list(map(lambda _x: max(min(round(_x * 255), 255), 0), *xyz_to_linear_rgb(*_xyz_coord))))
+    return "{} {} {}".format(*list(map(lambda _x: max(min(round(_x * 255), 255), 0), xyz_to_linear_rgb(*_xyz_coord))))
 
 
 if __name__ == "__main__":
