@@ -553,3 +553,5 @@ if __name__ == "__main__":
     img = Image.new('RGB', (1000, 1000), (max(min(round(rgb[0] * 255), 255), 0), max(min(round(rgb[1] * 255), 255), 0),
                                           max(min(round(rgb[2] * 255), 255), 0)))
     img.save("./images/{}.png".format("Analyzed"))
+
+    print("Result image of calculated mixture was written to {}".format("./images/{}.png".format("Analyzed")))
