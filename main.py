@@ -538,7 +538,7 @@ if __name__ == "__main__":
     # ------------------------------------------------ Analyzing color -------------------------------------------------
     # ------------------------------------------------------------------------------------------------------------------
     base = [processed_data[4], *processed_data[7:17]]  # Set base colors spectrum to mix
-    color_to_analyze = processed_data[26]              # Set color spectrum to analyze
+    color_to_analyze = processed_data[29]              # Set color spectrum to analyze
 
     result_spectrum_base_proportions = analyze_color(base, color_to_analyze)
     result_spectrum = mix_it(base, result_spectrum_base_proportions)
