@@ -15,6 +15,9 @@ import math
 from mixing import analyze_color, mix_it
 
 
+ACCURACY_LIMIT = 10
+
+
 # Getting vectors from file
 def get_all_vectors_from_file(filename: str, naming_pattern=r"^\[[0-9]*\]-.*-[0-9]*_E$") -> [list[list[float]],
                                                                                              list[float]]:
@@ -552,7 +555,7 @@ if __name__ == "__main__":
     print('========================================')
     print('True color coordinates:')
     true_xyz = calculate_color_xyz(color_to_analyze, lambda_data, color_coefficients, DELTA_LAMBDA)
-    true_rgb = calculated_colors[29]
+    true_rgb = xyz_to_linear_rgb(*true_xyz)
     print('XYZ: ({:.5f}, {:.5f}, {:.5f})'.format(*true_xyz))
     print('RGB: ({:.5f}, {:.5f}, {:.5f}) --> ({}, {}, {})'.format(*true_rgb, *list(map(lambda _x: max(min(round(_x * 255), 255), 0), true_rgb))))
     print('========================================')
@@ -564,7 +567,10 @@ if __name__ == "__main__":
     print('Total difference XYZ: {:.5f}'.format(sum(np.fabs(xyz_coord - true_xyz))))
     print()
     print('Maximum difference RGB: {:.5f}'.format(max(np.fabs(rgb - true_rgb))))
-    print('Total difference RGB: {:.5f}'.format(sum(np.fabs(rgb - true_rgb))))
+    print('Total difference RGB: {:.5f}'.format(TOTAL_DIFF_RGB := sum(np.fabs(rgb - true_rgb))))
+
+    if TOTAL_DIFF_RGB * 255 > ACCURACY_LIMIT:
+        print("ACHTUNG, NOTE_BENE, AAAAAAAAAAAAAAAAAAAAAAAAAAAA: You cannot get this color out of the base colors")
 
     img = Image.new('RGB', (1000, 1000), (max(min(round(rgb[0] * 255), 255), 0), max(min(round(rgb[1] * 255), 255), 0),
                                           max(min(round(rgb[2] * 255), 255), 0)))
