@@ -12,6 +12,7 @@ import sys
 import platform
 from PIL import Image
 import math
+from mixing import analyze_color, mix_it
 
 
 # Getting vectors from file
@@ -512,7 +513,7 @@ if __name__ == "__main__":
         xyz_coord = calculate_color_xyz(vector, lambda_data, color_coefficients, DELTA_LAMBDA)
         print("{:.5f} {:.5f} {:.5f}".format(*xyz_coord), filenames[k], file=xyz_file)
         k += 1
-        
+
         calculated_colors.append(xyz_to_linear_rgb(*xyz_coord))
     if platform.system() == "Windows":
         output_file = open('output.txt', 'w')
@@ -532,3 +533,23 @@ if __name__ == "__main__":
 
     xyz_file.flush()
     xyz_file.close()
+
+    # ------------------------------------------------------------------------------------------------------------------
+    # ------------------------------------------------ Analyzing color -------------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
+    base = [processed_data[4], *processed_data[7:17]]  # Set base colors spectrum to mix
+    color_to_analyze = processed_data[26]              # Set color spectrum to analyze
+
+    result_spectrum_base_proportions = analyze_color(base, color_to_analyze)
+    result_spectrum = mix_it(base, result_spectrum_base_proportions)
+
+    xyz_coord = calculate_color_xyz(result_spectrum, lambda_data, color_coefficients, DELTA_LAMBDA)
+    rgb = xyz_to_linear_rgb(*xyz_coord)
+
+    print('Calculated proportions:', result_spectrum_base_proportions)
+    print('Calculated XYZ: ({:.5f}, {:.5f}, {:.5f})'.format(*xyz_coord))
+    print('Calculated RGB: ({:.5f}, {:.5f}, {:.5f})'.format(*rgb))
+
+    img = Image.new('RGB', (1000, 1000), (max(min(round(rgb[0] * 255), 255), 0), max(min(round(rgb[1] * 255), 255), 0),
+                                          max(min(round(rgb[2] * 255), 255), 0)))
+    img.save("./images/{}.png".format("Analyzed"))
