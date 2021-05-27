@@ -34,6 +34,11 @@ def mix_it(colors: list[list[float]], colors_parts: list[float]) -> list[float]:
                           3/6=1/2 of blue
     :return: list of intensity normalised from 0 to 1 of mixed color
     """
+
+    for idx in range(len(colors_parts)):
+        if colors_parts[idx] <= 0:
+            colors_parts[idx] = 0
+
     total = sum(colors_parts)
     part_coefficients = list(map(lambda _x: _x / total, colors_parts))
     result = [1] * len(colors[0])
@@ -66,8 +71,8 @@ def analyze_color(base_colors_spectrum: list[list[float]], color_to_analyze: lis
 
     def function_to_optimize(k_coefficients: np.array):
         current_calculated_color = mix_it(base_colors_spectrum, k_coefficients)
-        return spectrum_diff(current_calculated_color, color_to_analyze)
+        return spectrum_diff(current_calculated_color, color_to_analyze) * len(list(filter(lambda _x: _x > 0, k_coefficients)))
 
     result = scipy.optimize.minimize(function_to_optimize, colors_parts_coefficients)
-    minimum = min(result.x)
-    return list(map(lambda element: round(element / minimum, 5), result.x))
+    minimum = min(filter(lambda _x: _x > 0, result.x))
+    return list(map(lambda element: 0 if element <= 0 else round(element / minimum, 5), result.x))
